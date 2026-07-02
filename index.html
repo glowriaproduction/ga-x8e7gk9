@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glowria // Alpha</title>
+<style>
+*{box-sizing:border-box;margin:0}
+:root{
+  --bg:#0B0E11; --panel:#13171C; --raise:#1C2129; --line:#232A33;
+  --glow:#F0B429; --long:#2DD4A7; --short:#F06548;
+  --txt:#E8ECF1; --mut:#8A94A6;
+}
+html,body{background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px}
+body{padding-bottom:40px}
+.mono,.ga-price,.ga-score,.ga-lvl b,.ga-rank,.ga-rej-score,.ga-chg,.ga-nn,.ga-input{
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+
+.ga-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;
+  border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,14,17,.85);
+  backdrop-filter:blur(8px);z-index:30;flex-wrap:wrap}
+.ga-brand{font-weight:800;letter-spacing:.18em;font-size:15px;display:flex;gap:8px;align-items:baseline}
+.ga-glow{color:var(--glow);text-shadow:0 0 18px rgba(240,180,41,.45)}
+.ga-slash{color:var(--mut)} .ga-alpha{color:var(--txt);font-weight:600;letter-spacing:.3em}
+.ga-bar-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ga-evren{background:var(--panel);border:1px solid var(--line);color:var(--mut);padding:8px 12px;
+  border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:.15s}
+.ga-evren:hover{color:var(--txt)} .ga-evren.on{color:var(--glow);border-color:rgba(240,180,41,.4)}
+.ga-tfs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px}
+.ga-tf{background:none;border:none;color:var(--mut);padding:6px 12px;border-radius:6px;cursor:pointer;
+  font-size:12px;font-weight:600;letter-spacing:.05em;transition:.15s}
+.ga-tf:hover{color:var(--txt)} .ga-tf.on{background:var(--raise);color:var(--glow)}
+.ga-scan{background:var(--glow);color:#0B0E11;border:none;padding:10px 18px;border-radius:8px;
+  font-weight:800;letter-spacing:.08em;font-size:12px;cursor:pointer;transition:.15s}
+.ga-scan:hover{box-shadow:0 0 22px -2px rgba(240,180,41,.55);transform:translateY(-1px)}
+.ga-scan:disabled{opacity:.7;cursor:wait}
+.ga-scan.big{padding:14px 30px;font-size:14px;margin-top:8px}
+.ga-bar-load{height:2px;background:var(--line);overflow:hidden}
+.ga-bar-load span{display:block;height:100%;width:0;background:var(--glow);transition:width .3s;box-shadow:0 0 12px var(--glow)}
+
+.ga-evren-row{padding:13px 20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;
+  align-items:center;gap:14px;background:rgba(19,23,28,.5)}
+.ga-mode{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px}
+.ga-mp{background:none;border:none;color:var(--mut);padding:7px 13px;border-radius:6px;cursor:pointer;
+  font-size:12px;font-weight:600;transition:.15s}
+.ga-mp:hover{color:var(--txt)} .ga-mp.on{background:var(--raise);color:var(--glow)}
+.ga-topn{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ga-nn{background:var(--panel);border:1px solid var(--line);color:var(--mut);width:40px;height:34px;
+  border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;transition:.15s}
+.ga-nn:hover{color:var(--txt)} .ga-nn.on{background:var(--raise);color:var(--glow);border-color:rgba(240,180,41,.35)}
+.ga-custom{display:flex;align-items:center;gap:12px;flex:1;min-width:260px;flex-wrap:wrap}
+.ga-input{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--line);color:var(--txt);
+  padding:9px 13px;border-radius:8px;font-size:13px;outline:none;transition:.15s}
+.ga-input:focus{border-color:rgba(240,180,41,.5);box-shadow:0 0 0 3px rgba(240,180,41,.08)}
+.ga-input::placeholder{color:#4d5563}
+.ga-hint{color:var(--mut);font-size:11.5px} .ga-invalid{width:100%;color:#e8a17a;font-size:11.5px}
+.ga-workerrow{width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  border-top:1px dashed var(--line);padding-top:11px;margin-top:2px}
+.ga-workerrow label{color:var(--mut);font-size:11px;letter-spacing:.08em;font-weight:700}
+.ga-wstat{font-size:11px} .ga-wstat.ok{color:var(--long)} .ga-wstat.off{color:var(--mut)}
+
+.ga-regime{display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid var(--line);
+  flex-wrap:wrap;font-size:13px}
+.ga-risk{font-weight:800;letter-spacing:.1em;font-size:11px;padding:4px 9px;border-radius:5px}
+.r-on{background:rgba(45,212,167,.13);color:var(--long)}
+.r-off{background:rgba(240,101,72,.13);color:var(--short)}
+.r-flat{background:rgba(138,148,166,.13);color:var(--mut)}
+.ga-regime-txt{color:var(--mut)} .ga-count{margin-left:auto;color:var(--mut);font-size:12px}
+
+.ga-error{margin:18px 20px;padding:14px 16px;border:1px solid rgba(240,101,72,.4);
+  background:rgba(240,101,72,.08);border-radius:10px;color:#ffb3a3;font-size:13px}
+.ga-hero{max-width:620px;margin:9vh auto 0;padding:0 24px;text-align:center}
+.ga-hero-title{font-size:34px;font-weight:800;line-height:1.15;letter-spacing:-.01em}
+.ga-hero-sub{color:var(--mut);font-size:15px;line-height:1.6;margin:18px auto 26px;max-width:520px}
+.ga-disc{color:#5e6675;font-size:11.5px;margin-top:20px}
+
+.ga-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:20px}
+.ga-empty{grid-column:1/-1;color:var(--mut);text-align:center;padding:40px 20px;
+  border:1px dashed var(--line);border-radius:12px;line-height:1.6}
+.ga-card{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:15px;cursor:pointer;transition:.18s;position:relative;overflow:hidden;color:inherit;display:block;width:100%}
+.ga-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c)}
+.ga-card:hover{border-color:var(--c);transform:translateY(-2px);box-shadow:0 8px 30px -12px var(--c)}
+.ga-card-top{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.ga-rank{color:var(--mut);font-size:12px;font-weight:600}
+.ga-sym{font-weight:800;font-size:17px}
+.ga-bias{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.1em;padding:3px 8px;border-radius:5px}
+.b-LONG{background:rgba(45,212,167,.14);color:var(--long)}
+.b-SHORT{background:rgba(240,101,72,.14);color:var(--short)}
+.ga-card-mid{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.ga-price{font-size:15px;font-weight:600} .ga-chg{font-size:11px;margin-left:7px;font-weight:600}
+.ga-score{font-size:30px;font-weight:800;line-height:1} .ga-score small{font-size:12px;color:var(--mut)}
+.ga-spark{margin:8px 0 10px;opacity:.9;height:34px}
+.ga-chips{display:flex;flex-wrap:wrap;gap:5px}
+.ga-chip{font-size:10.5px;color:var(--mut);background:var(--raise);border:1px solid var(--line);
+  padding:3px 7px;border-radius:5px} .ga-chip.more{color:var(--glow)}
+
+.ga-rej-head{grid-column:1/-1;color:var(--mut);font-size:11px;font-weight:700;letter-spacing:.16em;
+  margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ga-rej{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:8px 12px;background:var(--panel);
+  border:1px solid var(--line);border-radius:8px;opacity:.62}
+.ga-rej-sym{font-weight:700;min-width:54px} .ga-rej-score{color:var(--mut)}
+.ga-rej-flags{color:var(--mut);font-size:12px;margin-left:auto}
+
+.ga-overlay{position:fixed;inset:0;background:rgba(5,7,9,.6);backdrop-filter:blur(3px);z-index:50;
+  display:none;justify-content:flex-end}
+.ga-overlay.show{display:flex}
+.ga-panel{width:min(460px,100%);height:100%;background:var(--panel);border-left:1px solid var(--line);
+  overflow-y:auto;padding:22px;animation:slide .25s ease}
+@keyframes slide{from{transform:translateX(30px);opacity:.4}to{transform:none;opacity:1}}
+.ga-panel-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.ga-panel-sym{font-size:26px;font-weight:800}
+.ga-panel-sym span{font-size:13px;color:var(--mut);font-weight:500;margin-left:6px}
+.ga-side{font-size:12px;font-weight:700;margin-top:5px}
+.s-LONG{color:var(--long)} .s-SHORT{color:var(--short)}
+.ga-x{background:var(--raise);border:1px solid var(--line);color:var(--mut);width:32px;height:32px;
+  border-radius:8px;cursor:pointer;font-size:13px} .ga-x:hover{color:var(--txt)}
+.ga-levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.ga-lvl{background:var(--raise);border:1px solid var(--line);border-radius:9px;padding:9px 6px;text-align:center}
+.ga-lvl span{display:block;font-size:9.5px;color:var(--mut);letter-spacing:.12em;margin-bottom:4px}
+.ga-lvl b{font-size:13px;font-weight:700}
+.ga-ai{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:16px;min-height:120px}
+.ga-ai-load{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:13px}
+.ga-dot{width:6px;height:6px;border-radius:50%;background:var(--glow);animation:blink 1.2s infinite}
+.ga-dot:nth-child(2){animation-delay:.2s}.ga-dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.ga-h{color:var(--glow);font-weight:800;font-size:11px;letter-spacing:.13em;margin:14px 0 6px}
+.ga-h:first-child{margin-top:0}
+.ga-p{line-height:1.62;color:#d4dae2;font-size:13.5px}
+.ga-li{line-height:1.55;color:#d4dae2;font-size:13.5px;padding-left:14px;position:relative}
+.ga-li::before{content:"›";position:absolute;left:0;color:var(--glow)}
+.ga-warn{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);color:#7c8492;font-size:11.5px}
+.ga-setup{color:var(--mut);font-size:13px;line-height:1.6}
+.ga-setup code{background:var(--raise);padding:2px 6px;border-radius:4px;color:var(--glow);font-size:12px}
+@media(max-width:560px){.ga-hero{margin-top:6vh}.ga-hero-title{font-size:26px}.ga-bar{padding:12px 14px}.ga-grid{padding:14px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="ga-bar">
+  <div class="ga-brand"><span class="ga-glow">GLOWRIA</span><span class="ga-slash">//</span><span class="ga-alpha">ALPHA</span></div>
+  <div class="ga-bar-right">
+    <button class="ga-evren" id="evrenBtn">EVREN · Top 40</button>
+    <div class="ga-tfs" id="tfs"></div>
+    <button class="ga-scan" id="scanBtn">PİYASAYI TARA</button>
+  </div>
+</header>
+<div class="ga-bar-load" id="barLoadWrap" style="display:none"><span id="barLoad"></span></div>
+<div id="evrenRow" style="display:none"></div>
+<div id="regime"></div>
+<div id="content"></div>
+
+<div class="ga-overlay" id="overlay"><aside class="ga-panel" id="panel"></aside></div>
+
+<script>
+/* ============ AYAR ============ */
+// AI derin analiz Google Gemini ile çalışır (ücretsiz). Anahtarını aşağıdaki
+// EVREN panelindeki "GEMINI API KEY" kutusuna gir; SADECE senin tarayıcında saklanır,
+// sayfa kaynağında görünmez. Anahtar yoksa tarayıcı + skorlama yine tam çalışır.
+let GEMINI_KEY = localStorage.getItem("ga_gemkey") || "";
+let GEMINI_MODEL = localStorage.getItem("ga_gemmodel") || "gemini-2.5-flash";
+
+/* ============ SABİTLER ============ */
+const TIMEFRAMES=["15m","1h","4h","1d"];
+const TOPN_OPTS=[20,40,60,80];
+const MAX_UNI=90;
+const STABLES=new Set(["USDC","FDUSD","TUSD","DAI","USDP","BUSD","EURI","AEUR","USD1","XUSD","EUR","GBP","TRY"]);
+const isLev=s=>/(UP|DOWN|BULL|BEAR)USDT$/.test(s);
+function normSym(r){let s=r.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");if(!s)return null;if(!/USDT$/.test(s))s+="USDT";return s;}
+
+/* ============ GÖSTERGELER ============ */
+const last=a=>a[a.length-1];
+const sma=(a,p)=>a.length<p?null:a.slice(-p).reduce((s,x)=>s+x,0)/p;
+function emaS(a,p){if(a.length<p)return[];const k=2/(p+1);const o=[a.slice(0,p).reduce((s,x)=>s+x,0)/p];for(let i=p;i<a.length;i++)o.push(a[i]*k+o[o.length-1]*(1-k));return o;}
+const ema=(a,p)=>{const s=emaS(a,p);return s.length?last(s):null;};
+function rsi(c,p=14){if(c.length<p+1)return null;let g=0,l=0;for(let i=1;i<=p;i++){const d=c[i]-c[i-1];d>=0?g+=d:l-=d;}g/=p;l/=p;for(let i=p+1;i<c.length;i++){const d=c[i]-c[i-1];g=(g*(p-1)+(d>0?d:0))/p;l=(l*(p-1)+(d<0?-d:0))/p;}if(l===0)return 100;return 100-100/(1+g/l);}
+function macd(c){if(c.length<35)return null;const e12=emaS(c,12),e26=emaS(c,26),off=e12.length-e26.length;const line=e26.map((v,i)=>e12[i+off]-v);const sig=emaS(line,9),so=line.length-sig.length;const hist=sig.map((s,i)=>line[i+so]-s);return{line:last(line),hist:last(hist),prevHist:hist.length>1?hist[hist.length-2]:0};}
+function boll(c,p=20,m=2){if(c.length<p)return null;const s=c.slice(-p),mid=s.reduce((a,x)=>a+x,0)/p,sd=Math.sqrt(s.reduce((a,x)=>a+(x-mid)**2,0)/p);return{upper:mid+m*sd,mid,lower:mid-m*sd};}
+function atr(h,l,c,p=14){if(c.length<p+1)return null;const tr=[];for(let i=1;i<c.length;i++)tr.push(Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));return sma(tr,p);}
+
+/* ============ KONFLUANS + ELEME MOTORU ============ */
+function analyze(symbol,candles){
+  const closes=candles.map(c=>c.c),highs=candles.map(c=>c.h),lows=candles.map(c=>c.l),vols=candles.map(c=>c.v);
+  if(closes.length<60)return null;
+  const price=last(closes),s20=sma(closes,20),s50=sma(closes,50),s200=sma(closes,200),
+    e20=ema(closes,20),r=rsi(closes),m=macd(closes),bb=boll(closes),a=atr(highs,lows,closes),volSma=sma(vols,20);
+  if(s20==null||s50==null||r==null||m==null||a==null)return null;
+  const atrPct=a/price*100, volRatio=volSma?last(vols)/volSma:1;
+  const s20prev=sma(closes.slice(0,-5),20), slope=s20prev?(s20-s20prev)/s20prev:0;
+  const rsiPrev=rsi(closes.slice(0,-1)), rsiRising=rsiPrev!=null&&r>rsiPrev, distEma=(price-e20)/e20;
+  const L=[],S=[];const aL=(c,w,t)=>c&&L.push({w,t});const aS=(c,w,t)=>c&&S.push({w,t});
+  aL(price>s50,2,"Trend yukarı (>SMA50)");
+  aL(s200!=null&&s50>s200,1.5,"Yapı boğa (SMA50>200)");
+  aL(price>e20&&slope>0,1,"EMA20 üstü + eğim ↑");
+  aL(m.hist>0,1.5,"MACD pozitif");
+  aL(m.prevHist<0&&m.hist>0,1,"Taze MACD kesişimi ↑");
+  aL(r>=50&&r<=68,1.5,"RSI momentum ("+r.toFixed(0)+")");
+  aL(price>s50&&r>=38&&r<=50&&rsiRising,2,"RSI dip-toparlanma");
+  aL(volRatio>=1.3,1.5,"Hacim teyidi ("+volRatio.toFixed(1)+"x)");
+  aL(price>s50&&distEma>=0&&distEma<=0.02,1.5,"Desteğe geri çekiliş");
+  aL(bb!=null&&price<=bb.mid&&price>bb.lower&&price>s50,1,"BB alt-bant tepki");
+  aS(price<s50,2,"Trend aşağı (<SMA50)");
+  aS(s200!=null&&s50<s200,1.5,"Yapı ayı (SMA50<200)");
+  aS(price<e20&&slope<0,1,"EMA20 altı + eğim ↓");
+  aS(m.hist<0,1.5,"MACD negatif");
+  aS(m.prevHist>0&&m.hist<0,1,"Taze MACD kesişimi ↓");
+  aS(r<=50&&r>=32,1.5,"RSI momentum ("+r.toFixed(0)+")");
+  aS(price<s50&&r>=50&&r<=62&&!rsiRising,2,"RSI ralli-satış");
+  aS(volRatio>=1.3,1.5,"Hacim teyidi ("+volRatio.toFixed(1)+"x)");
+  aS(price<s50&&distEma<=0&&distEma>=-0.02,1.5,"Dirençten ret");
+  aS(bb!=null&&price>=bb.mid&&price<bb.upper&&price<s50,1,"BB üst-bant ret");
+  let longT=L.reduce((s,f)=>s+f.w,0),shortT=S.reduce((s,f)=>s+f.w,0);
+  const flags=[],choppy=Math.abs(price/s50-1)<0.005&&Math.abs(slope)<0.004;
+  if(choppy){flags.push("Yatay/choppy");longT-=3;shortT-=3;}
+  if(price>s20+2.5*a){flags.push("Aşırı uzamış (long)");longT-=2;}
+  if(price<s20-2.5*a){flags.push("Aşırı uzamış (short)");shortT-=2;}
+  if(r>78){flags.push("RSI aşırı alım");longT-=1.5;}
+  if(r<22){flags.push("RSI aşırı satım");shortT-=1.5;}
+  if(atrPct>12){flags.push("Aşırı volatilite");longT-=2;shortT-=2;}
+  if(volRatio<0.6){flags.push("Düşük hacim");longT-=1.5;shortT-=1.5;}
+  const conflict=Math.abs(longT-shortT)<2, side=longT>=shortT?"LONG":"SHORT",
+    raw=Math.max(longT,shortT), score=Math.max(0,Math.min(10,raw)), passed=!conflict&&!choppy&&score>=6;
+  const swingLow=Math.min(...lows.slice(-12)),swingHigh=Math.max(...highs.slice(-12));
+  let entry=price,stop,target;
+  if(side==="LONG"){stop=Math.min(price-1.5*a,swingLow);target=Math.max(price+2.2*a,swingHigh);}
+  else{stop=Math.max(price+1.5*a,swingHigh);target=Math.min(price-2.2*a,swingLow);}
+  const rr=Math.abs((target-entry)/(entry-stop));
+  return{symbol,side,score,passed,flags,factors:side==="LONG"?L:S,price,rsi:r,atrPct,volRatio,
+    s50,macdHist:m.hist,entry,stop,target,rr,spark:closes.slice(-44)};
+}
+
+/* ============ VERİ ============ */
+async function fetchAllTickers(){
+  const r=await fetch("https://api.binance.com/api/v3/ticker/24hr");
+  if(!r.ok)throw new Error("ticker "+r.status);
+  const arr=await r.json();const map={},ranked=[];
+  for(const t of arr){const sym=t.symbol;if(!sym.endsWith("USDT"))continue;
+    const qv=parseFloat(t.quoteVolume);
+    map[sym]={chg:parseFloat(t.priceChangePercent),qv,price:parseFloat(t.lastPrice)};
+    const base=sym.slice(0,-4);if(isLev(sym)||STABLES.has(base))continue;ranked.push({sym,qv});}
+  ranked.sort((a,b)=>b.qv-a.qv);
+  return{map,ranked:ranked.map(x=>x.sym),valid:new Set(Object.keys(map))};
+}
+async function fetchKlines(sym,tf){
+  const r=await fetch("https://api.binance.com/api/v3/klines?symbol="+sym+"&interval="+tf+"&limit=210");
+  if(!r.ok)throw new Error(sym+" "+r.status);
+  return (await r.json()).map(x=>({t:x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]}));
+}
+
+/* ============ FORMAT ============ */
+function fmt(n){if(n==null||isNaN(n))return"—";const a=Math.abs(n),d=a>=1000?2:a>=1?3:a>=0.01?5:7;
+  return n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});}
+function sparkSVG(v,c){const w=100,h=34,mn=Math.min(...v),mx=Math.max(...v),rng=(mx-mn)||1;
+  const pts=v.map((x,i)=>(i/(v.length-1)*w).toFixed(1)+","+(h-((x-mn)/rng)*h).toFixed(1)).join(" ");
+  return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="width:100%;height:34px"><polyline points="'+pts+'" fill="none" stroke="'+c+'" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg>';}
+
+/* ============ STATE ============ */
+const ST={tf:"4h",mode:"top",topN:40,custom:"",showEvren:false,loading:false,
+  results:[],rejected:[],regime:null,error:null,scanned:false,invalid:[],uniCount:40,sel:null,ai:null,aiLoading:false};
+let reqId=0;
+
+/* ============ RENDER ============ */
+const $=id=>document.getElementById(id);
+function renderTfs(){$("tfs").innerHTML=TIMEFRAMES.map(t=>'<button class="ga-tf'+(t===ST.tf?" on":"")+'" data-tf="'+t+'">'+t+'</button>').join("");}
+function renderEvrenBtn(){$("evrenBtn").textContent="EVREN · "+(ST.mode==="custom"?"özel":"Top "+ST.topN);$("evrenBtn").className="ga-evren"+(ST.showEvren?" on":"");}
+function renderEvrenRow(){
+  const el=$("evrenRow");
+  if(!ST.showEvren){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="";el.className="ga-evren-row";
+  const wstat=GEMINI_KEY?'<span class="ga-wstat ok">● bağlı</span>':'<span class="ga-wstat off">● anahtar yok (tarayıcı yine çalışır)</span>';
+  el.innerHTML=
+    '<div class="ga-mode"><button class="ga-mp'+(ST.mode==="top"?" on":"")+'" data-mode="top">Hacme göre Top-N</button>'+
+    '<button class="ga-mp'+(ST.mode==="custom"?" on":"")+'" data-mode="custom">Kendi listem</button></div>'+
+    (ST.mode==="top"
+      ? '<div class="ga-topn">'+TOPN_OPTS.map(n=>'<button class="ga-nn'+(n===ST.topN?" on":"")+'" data-n="'+n+'">'+n+'</button>').join("")+
+        '<span class="ga-hint">Binance USDT hacminde en yüksek '+ST.topN+' coin · stablecoin & kaldıraçlı hariç.</span></div>'
+      : '<div class="ga-custom"><input class="ga-input" id="customInput" placeholder="BTC, ETH, SOL, PEPE, WIF, JUP…" value="'+ST.custom.replace(/"/g,"&quot;")+'">'+
+        '<span class="ga-hint">Virgül/boşlukla ayır · "USDT" gerekmez · max '+MAX_UNI+'.</span></div>')+
+    (ST.invalid.length?'<div class="ga-invalid">Bulunamadı: '+ST.invalid.join(", ")+'</div>':"")+
+    '<div class="ga-workerrow"><label>GEMINI API KEY</label>'+
+    '<input class="ga-input" id="gemkeyInput" type="password" placeholder="AIza… (aistudio.google.com)" value="'+GEMINI_KEY.replace(/"/g,"&quot;")+'" style="min-width:240px">'+wstat+
+    '<span class="ga-hint" style="width:100%">Sadece bu tarayıcıda saklanır, sayfada görünmez. aistudio.google.com → Get API key → kopyala, buraya yapıştır.</span></div>';
+}
+function renderRegime(){
+  const el=$("regime");if(!ST.regime){el.innerHTML="";return;}
+  const g=ST.regime,cls=g.risk==="RISK-ON"?"r-on":g.risk==="RISK-OFF"?"r-off":"r-flat";
+  el.innerHTML='<div class="ga-regime"><span class="ga-risk '+cls+'">'+g.risk+'</span>'+
+    '<span class="ga-regime-txt">BTC pusulası · <b style="color:'+(g.side==="LONG"?"#2DD4A7":"#F06548")+'">'+g.side+'</b> · $'+fmt(g.price)+
+    (g.chg!=null?' <em style="font-style:normal;color:'+(g.chg>=0?"#2DD4A7":"#F06548")+'">('+(g.chg>=0?"+":"")+g.chg.toFixed(1)+'%)</em>':"")+'</span>'+
+    '<span class="ga-count">'+ST.results.length+' kaliteli / '+ST.uniCount+' tarandı</span></div>';
+}
+function cardHTML(s,rank){
+  const c=s.side==="LONG"?"#2DD4A7":"#F06548";
+  const chips=s.factors.slice(0,4).map(f=>'<span class="ga-chip">'+f.t+'</span>').join("")+
+    (s.factors.length>4?'<span class="ga-chip more">+'+(s.factors.length-4)+'</span>':"");
+  return '<button class="ga-card" data-sym="'+s.symbol+'" style="--c:'+c+'">'+
+    '<div class="ga-card-top"><span class="ga-rank">'+String(rank).padStart(2,"0")+'</span>'+
+    '<span class="ga-sym">'+s.symbol.replace("USDT","")+'</span>'+
+    '<span class="ga-bias b-'+s.side+'">'+s.side+'</span></div>'+
+    '<div class="ga-card-mid"><div class="ga-price">$'+fmt(s.price)+
+    (s.chg!=null?'<span class="ga-chg" style="color:'+(s.chg>=0?"#2DD4A7":"#F06548")+'">'+(s.chg>=0?"+":"")+s.chg.toFixed(1)+'%</span>':"")+'</div>'+
+    '<div class="ga-score" style="color:'+c+'">'+s.score.toFixed(1)+'<small>/10</small></div></div>'+
+    '<div class="ga-spark">'+sparkSVG(s.spark,c)+'</div>'+
+    '<div class="ga-chips">'+chips+'</div></button>';
+}
+function renderContent(){
+  const el=$("content");
+  if(ST.error){el.innerHTML='<div class="ga-error">'+ST.error+'</div>';return;}
+  if(!ST.scanned&&!ST.loading){
+    el.innerHTML='<div class="ga-hero"><div class="ga-hero-title">Gürültüyü değil, <span class="ga-glow">konfluansı</span> gör.</div>'+
+      '<p class="ga-hero-sub">Binance\'te hacmi en yüksek onlarca pariteyi (ya da kendi listeni) canlı tarar; choppy, hacimsiz ve çelişen '+
+      'kurulumları eler. Geriye yalnızca skoru 6+, net yönlü fırsatlar kalır.</p>'+
+      '<button class="ga-scan big" id="heroScan">PİYASAYI TARA</button>'+
+      '<div class="ga-disc">⚠ Karar-destek aracıdır, yatırım tavsiyesi değildir. Kripto yüksek risklidir.</div></div>';
+    const h=$("heroScan");if(h)h.onclick=runScan;return;
+  }
+  if(!ST.scanned){el.innerHTML="";return;}
+  let html='<main class="ga-grid">';
+  if(ST.results.length===0)html+='<div class="ga-empty">Bu zaman diliminde kalite eşiğini geçen setup yok — piyasa kararsız. Farklı zaman dilimi dene. (En iyi adaylar aşağıda, eşik altı.)</div>';
+  ST.results.forEach((s,i)=>html+=cardHTML(s,i+1));
+  if(ST.rejected.length){
+    html+='<div class="ga-rej-head">ELENENLER · eşik altı / net yön yok</div>';
+    ST.rejected.slice(0,8).forEach(s=>html+='<div class="ga-rej"><span class="ga-rej-sym">'+s.symbol.replace("USDT","")+
+      '</span><span class="ga-rej-score">'+s.score.toFixed(1)+'</span><span class="ga-rej-flags">'+(s.flags[0]||"net yön yok")+'</span></div>');
+  }
+  html+='</main>';el.innerHTML=html;
+}
+function renderPanel(){
+  const ov=$("overlay");
+  if(!ST.sel){ov.classList.remove("show");return;}
+  const s=ST.sel;ov.classList.add("show");
+  let ai="";
+  if(ST.aiLoading)ai='<div class="ga-ai-load"><span class="ga-dot"></span><span class="ga-dot"></span><span class="ga-dot"></span><em style="margin-left:6px">Web\'den güncel katalizör aranıyor & analiz yazılıyor…</em></div>';
+  else if(ST.ai==="__NOKEY__")ai='<div class="ga-setup">AI derin analiz için ücretsiz bir Gemini anahtarı gir. <code>aistudio.google.com</code> → <b>Get API key</b> → kopyala, sonra EVREN panelindeki <code>GEMINI API KEY</code> kutusuna yapıştır. Anahtar olmadan tarayıcı + skorlama tam çalışır; sadece bu panel devre dışı kalır.</div>';
+  else if(ST.ai)ai=fmtAI(ST.ai);
+  $("panel").innerHTML=
+    '<div class="ga-panel-head"><div><div class="ga-panel-sym">'+s.symbol.replace("USDT","")+'<span>/USDT · '+ST.tf+'</span></div>'+
+    '<div class="ga-side s-'+s.side+'">'+s.side+' · skor '+s.score.toFixed(1)+'</div></div>'+
+    '<button class="ga-x" id="closePanel">✕</button></div>'+
+    '<div class="ga-levels">'+lvl("GİRİŞ",fmt(s.entry))+lvl("STOP",fmt(s.stop),"#F06548")+
+    lvl("HEDEF",fmt(s.target),"#2DD4A7")+lvl("R:R",s.rr.toFixed(1),"#F0B429")+'</div>'+
+    '<div class="ga-ai">'+ai+'</div>';
+  $("closePanel").onclick=()=>{ST.sel=null;renderPanel();};
+}
+function lvl(l,v,c){return '<div class="ga-lvl"><span>'+l+'</span><b'+(c?' style="color:'+c+'"':"")+'>'+v+'</b></div>';}
+function fmtAI(text){return text.split("\n").map(ln=>{const t=ln.trim();
+  if(!t)return'<div style="height:6px"></div>';
+  if(t.startsWith("▸"))return'<div class="ga-h">'+t.replace(/^▸\s*/,"")+'</div>';
+  if(t.startsWith("⚠"))return'<div class="ga-warn">'+t+'</div>';
+  if(t.startsWith("•")||t.startsWith("-"))return'<div class="ga-li">'+t.replace(/^[•-]\s*/,"")+'</div>';
+  return'<div class="ga-p">'+t+'</div>';}).join("");}
+function renderAll(){renderTfs();renderEvrenBtn();renderEvrenRow();renderRegime();renderContent();renderPanel();
+  $("scanBtn").disabled=ST.loading;$("scanBtn").textContent=ST.loading?("TARANIYOR "+ST.prog+"%"):"PİYASAYI TARA";
+  $("barLoadWrap").style.display=ST.loading?"":"none";}
+
+/* ============ TARAMA ============ */
+async function runScan(){
+  const id=++reqId;
+  Object.assign(ST,{loading:true,error:null,prog:0,results:[],rejected:[],scanned:false,sel:null,ai:null});
+  renderAll();
+  try{
+    const{map:tickers,ranked,valid}=await fetchAllTickers();
+    if(id!==reqId)return;
+    let universe,invalid=[];
+    if(ST.mode==="custom"){
+      const uniq=[...new Set(ST.custom.split(/[\s,;\n]+/).map(normSym).filter(Boolean))];
+      universe=uniq.filter(s=>valid.has(s));invalid=uniq.filter(s=>!valid.has(s));
+      if(universe.length===0){ST.error="Geçerli sembol yok. Örnek: BTC, ETH, SOL, PEPE";ST.invalid=invalid;ST.loading=false;renderAll();return;}
+    }else universe=ranked.slice(0,ST.topN);
+    universe=universe.slice(0,MAX_UNI);ST.invalid=invalid;ST.uniCount=universe.length;
+    const out=[];let done=0;
+    for(let i=0;i<universe.length;i+=6){
+      const batch=universe.slice(i,i+6);
+      const settled=await Promise.allSettled(batch.map(async sym=>{
+        const a=analyze(sym,await fetchKlines(sym,ST.tf));
+        if(a){a.chg=tickers[sym]?.chg??null;a.qv=tickers[sym]?.qv??null;}return a;}));
+      if(id!==reqId)return;
+      settled.forEach(x=>{if(x.status==="fulfilled"&&x.value)out.push(x.value);});
+      done+=batch.length;ST.prog=Math.round(Math.min(100,done/universe.length*100));
+      $("barLoad").style.width=ST.prog+"%";$("scanBtn").textContent="TARANIYOR "+ST.prog+"%";
+    }
+    if(id!==reqId)return;
+    let btc=out.find(o=>o.symbol==="BTCUSDT");
+    if(!btc){try{const bc=await fetchKlines("BTCUSDT",ST.tf);btc=analyze("BTCUSDT",bc);if(btc)btc.chg=tickers["BTCUSDT"]?.chg??null;}catch(e){}}
+    if(btc)ST.regime={side:btc.side,score:btc.score,price:btc.price,chg:btc.chg,
+      risk:btc.side==="LONG"&&btc.score>=6?"RISK-ON":btc.side==="SHORT"&&btc.score>=6?"RISK-OFF":"NÖTR"};
+    ST.results=out.filter(o=>o.passed).sort((a,b)=>b.score-a.score);
+    ST.rejected=out.filter(o=>!o.passed).sort((a,b)=>b.score-a.score);
+    ST.scanned=true;
+  }catch(e){
+    ST.error="Binance verisine ulaşılamadı. Sayfayı kendi domaininde (GitHub Pages vb.) açtığından ve internetin olduğundan emin ol. Birkaç sn sonra tekrar dene. ("+(e.message||e)+")";
+  }finally{if(id===reqId){ST.loading=false;renderAll();}}
+}
+
+/* ============ AI DERİN ANALİZ (Gemini) ============ */
+async function deepDive(s){
+  ST.sel=s;ST.ai=null;
+  if(!GEMINI_KEY){ST.ai="__NOKEY__";renderPanel();return;}
+  ST.aiLoading=true;renderPanel();
+  const factorTxt=s.factors.map(f=>"• "+f.t).join("\n");
+  const prompt="Sen kıdemli bir kripto piyasa analistisin. Aşağıda canlı teknik veriyle taranıp KALİTELİ işaretlenmiş bir setup var. Eleştirel değerlendir ve net, uygulanabilir Türkçe derin analiz yaz. Web aramayı kullanarak "+s.symbol.replace("USDT","")+" ile ilgili son 1-2 gündeki güncel haber/katalizör/duyarlılığı bul ve teknik tabloyla çelişip çelişmediğini söyle.\n\nVERİ ("+ST.tf+"):\nSembol: "+s.symbol+" | Yön: "+s.side+" | Skor: "+s.score.toFixed(1)+"/10\nFiyat: "+fmt(s.price)+" | 24s: "+(s.chg!=null?s.chg.toFixed(1)+"%":"—")+"\nRSI: "+s.rsi.toFixed(0)+" | ATR%: "+s.atrPct.toFixed(1)+" | Hacim: "+s.volRatio.toFixed(1)+"x\nMACD hist: "+(s.macdHist>0?"+":"")+s.macdHist.toFixed(4)+" | SMA50: "+fmt(s.s50)+"\nGiriş: "+fmt(s.entry)+" | Stop: "+fmt(s.stop)+" | Hedef: "+fmt(s.target)+" | R:R≈"+s.rr.toFixed(1)+"\nKonfluans:\n"+factorTxt+
+    "\n\nÇIKTI (her başlık ▸ ile, kısa, ~180 kelime, markdown yıldızı KULLANMA):\n▸ TEZ\n▸ KONFLUANS\n▸ GÜNCEL KATALİZÖR (web'den; yoksa 'belirgin haber yok')\n▸ RİSK & GEÇERSİZLEŞME\n▸ NET GÖRÜŞ\nEn sonda ayrı satır: \"⚠ Yatırım tavsiyesi değildir.\"";
+  const url="https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent";
+  const base={contents:[{parts:[{text:prompt}]}]};
+  const withTools={...base,tools:[{google_search:{}}]};
+  const call=(body)=>fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":GEMINI_KEY},body:JSON.stringify(body)});
+  const extract=(d)=>{const p=d?.candidates?.[0]?.content?.parts;return p?p.map(x=>x.text||"").filter(Boolean).join("\n").trim():"";};
+  try{
+    let r=await call(withTools);let data=await r.json();
+    if(!r.ok||data.error){                        // arama desteklenmezse aramasız tekrar dene
+      r=await call(base);data=await r.json();
+      if(!r.ok||data.error){ST.ai="Gemini API: "+((data.error&&data.error.message)||r.status)+"\n\nAnahtar doğru mu? aistudio.google.com'dan yeni bir anahtar alıp EVREN'e yapıştır.";ST.aiLoading=false;renderPanel();return;}
+    }
+    ST.ai=extract(data)||"Analiz üretilemedi. Tekrar dene.";
+  }catch(e){ST.ai="Gemini'ye ulaşılamadı. İnternetini ve anahtarını kontrol et. ("+(e.message||e)+")";}
+  finally{ST.aiLoading=false;renderPanel();}
+}
+
+/* ============ OLAYLAR ============ */
+$("scanBtn").onclick=runScan;
+$("evrenBtn").onclick=()=>{ST.showEvren=!ST.showEvren;renderEvrenBtn();renderEvrenRow();};
+$("tfs").onclick=e=>{const b=e.target.closest("[data-tf]");if(b){ST.tf=b.dataset.tf;renderTfs();}};
+$("evrenRow").addEventListener("click",e=>{
+  const mp=e.target.closest("[data-mode]");if(mp){ST.mode=mp.dataset.mode;renderEvrenBtn();renderEvrenRow();return;}
+  const nn=e.target.closest("[data-n]");if(nn){ST.topN=+nn.dataset.n;renderEvrenBtn();renderEvrenRow();return;}
+});
+$("evrenRow").addEventListener("input",e=>{
+  if(e.target.id==="customInput")ST.custom=e.target.value;
+  if(e.target.id==="gemkeyInput"){GEMINI_KEY=e.target.value.trim();localStorage.setItem("ga_gemkey",GEMINI_KEY);
+    const st=e.target.parentElement.querySelector(".ga-wstat");if(st){st.className="ga-wstat "+(GEMINI_KEY?"ok":"off");st.textContent=GEMINI_KEY?"● bağlı":"● anahtar yok (tarayıcı yine çalışır)";}}
+});
+$("content").addEventListener("click",e=>{const c=e.target.closest("[data-sym]");
+  if(c){const s=ST.results.find(x=>x.symbol===c.dataset.sym);if(s)deepDive(s);}});
+$("overlay").addEventListener("click",e=>{if(e.target.id==="overlay"){ST.sel=null;renderPanel();}});
+
+renderAll();
+</script>
+</body>
+</html>
