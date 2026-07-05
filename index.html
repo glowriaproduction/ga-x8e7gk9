@@ -165,6 +165,7 @@ let GEMINI_MODEL = localStorage.getItem("ga_gemmodel") || "gemini-2.5-flash";
 const TIMEFRAMES=["15m","1h","4h","1d"];
 const TOPN_OPTS=[20,40,60,80];
 const MAX_UNI=90;
+const MIN_RR=1.5;                                 // bunun altındaki R:R kurulumları elenir
 const STABLES=new Set(["USDC","FDUSD","TUSD","DAI","USDP","BUSD","EURI","AEUR","USD1","XUSD","EUR","GBP","TRY"]);
 const isLev=s=>/(UP|DOWN|BULL|BEAR)USDT$/.test(s);
 function normSym(r){let s=r.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");if(!s)return null;if(!/USDT$/.test(s))s+="USDT";return s;}
@@ -219,13 +220,24 @@ function analyze(symbol,candles){
   if(r<22){flags.push("RSI aşırı satım");shortT-=1.5;}
   if(atrPct>12){flags.push("Aşırı volatilite");longT-=2;shortT-=2;}
   if(volRatio<0.6){flags.push("Düşük hacim");longT-=1.5;shortT-=1.5;}
-  const conflict=Math.abs(longT-shortT)<2, side=longT>=shortT?"LONG":"SHORT",
-    raw=Math.max(longT,shortT), score=Math.max(0,Math.min(10,raw)), passed=!conflict&&!choppy&&score>=6;
+  const side=longT>=shortT?"LONG":"SHORT";
   const swingLow=Math.min(...lows.slice(-12)),swingHigh=Math.max(...highs.slice(-12));
   let entry=price,stop,target;
-  if(side==="LONG"){stop=Math.min(price-1.5*a,swingLow);target=Math.max(price+2.2*a,swingHigh);}
-  else{stop=Math.max(price+1.5*a,swingHigh);target=Math.min(price-2.2*a,swingLow);}
-  const rr=Math.abs((target-entry)/(entry-stop));
+  if(side==="LONG"){
+    stop=Math.min(Math.max(swingLow,price-2.5*a),price-0.8*a);   // yapıya oturur, 0.8–2.5 ATR arası
+    target=Math.max(swingHigh,price+2.0*a);                       // en az 2 ATR veya sonraki direnç
+  }else{
+    stop=Math.max(Math.min(swingHigh,price+2.5*a),price+0.8*a);
+    target=Math.min(swingLow,price-2.0*a);
+  }
+  let rr=Math.abs((target-entry)/(entry-stop));
+  if(!isFinite(rr)||isNaN(rr))rr=0;
+  if(rr<MIN_RR)flags.push("Zayıf R:R ("+rr.toFixed(1)+")");
+  const conflict=Math.abs(longT-shortT)<2;
+  let raw=Math.max(longT,shortT);
+  if(rr>=MIN_RR)raw+=Math.min(1,(rr-MIN_RR)*0.5);                 // iyi R:R sıralamada öne çıkar
+  const score=Math.max(0,Math.min(10,raw));
+  const passed=!conflict&&!choppy&&score>=6&&rr>=MIN_RR;          // R:R kapısı burada
   return{symbol,side,score,passed,flags,factors:side==="LONG"?L:S,price,rsi:r,atrPct,volRatio,
     s50,macdHist:m.hist,entry,stop,target,rr,spark:closes.slice(-44)};
 }
@@ -339,7 +351,7 @@ function renderPanel(){
     '<div class="ga-side s-'+s.side+'">'+s.side+' · skor '+s.score.toFixed(1)+'</div></div>'+
     '<button class="ga-x" id="closePanel">✕</button></div>'+
     '<div class="ga-levels">'+lvl("GİRİŞ",fmt(s.entry))+lvl("STOP",fmt(s.stop),"#F06548")+
-    lvl("HEDEF",fmt(s.target),"#2DD4A7")+lvl("R:R",s.rr.toFixed(1),"#F0B429")+'</div>'+
+    lvl("HEDEF",fmt(s.target),"#2DD4A7")+lvl("R:R",s.rr.toFixed(1),s.rr>=2?"#2DD4A7":"#F0B429")+'</div>'+
     '<div class="ga-ai">'+ai+'</div>';
   $("closePanel").onclick=()=>{ST.sel=null;renderPanel();};
 }
