@@ -94,6 +94,8 @@ body{padding-bottom:40px}
 .ga-score{font-size:30px;font-weight:800;line-height:1} .ga-score small{font-size:12px;color:var(--mut)}
 .ga-spark{margin:8px 0 10px;opacity:.9;height:34px}
 .ga-chips{display:flex;flex-wrap:wrap;gap:5px}
+.ga-summary{margin:2px 0 9px;font-size:12.5px;line-height:1.5;color:#c4ccd6}
+.ga-tap{margin-top:9px;font-size:10.5px;color:var(--mut);letter-spacing:.02em;opacity:.75}
 .ga-chip{font-size:10.5px;color:var(--mut);background:var(--raise);border:1px solid var(--line);
   padding:3px 7px;border-radius:5px} .ga-chip.more{color:var(--glow)}
 
@@ -303,6 +305,16 @@ function renderRegime(){
     (g.chg!=null?' <em style="font-style:normal;color:'+(g.chg>=0?"#2DD4A7":"#F06548")+'">('+(g.chg>=0?"+":"")+g.chg.toFixed(1)+'%)</em>':"")+'</span>'+
     '<span class="ga-count">'+ST.results.length+' kaliteli / '+ST.uniCount+' tarandı</span></div>';
 }
+function plainSummary(s){
+  const yon=s.side==="LONG"?"yükseliş":"düşüş";
+  const kalite=s.score>=8?"Çok güçlü":s.score>=7?"Güçlü":s.score>=6.5?"Sağlam":"Sınırda";
+  const dayanak=s.factors.slice(0,3).map(f=>f.t.replace(/\s*\(.*?\)/,"").toLowerCase()).join(", ");
+  const rrTxt=s.rr>=2?"risk/ödül iyi ("+s.rr.toFixed(1)+")":"risk/ödül makul ("+s.rr.toFixed(1)+")";
+  let uyari="";
+  if(s.chg!=null&&Math.abs(s.chg)>=30)uyari=" Son 24s'de sert hareket etmiş, dikkat.";
+  else if(s.volRatio<1)uyari=" Hacim ortalamanın altında.";
+  return kalite+" bir "+yon+" kurulumu. Öne çıkan: "+dayanak+". "+rrTxt+"."+uyari;
+}
 function cardHTML(s,rank){
   const c=s.side==="LONG"?"#2DD4A7":"#F06548";
   const chips=s.factors.slice(0,4).map(f=>'<span class="ga-chip">'+f.t+'</span>').join("")+
@@ -315,7 +327,9 @@ function cardHTML(s,rank){
     (s.chg!=null?'<span class="ga-chg" style="color:'+(s.chg>=0?"#2DD4A7":"#F06548")+'">'+(s.chg>=0?"+":"")+s.chg.toFixed(1)+'%</span>':"")+'</div>'+
     '<div class="ga-score" style="color:'+c+'">'+s.score.toFixed(1)+'<small>/10</small></div></div>'+
     '<div class="ga-spark">'+sparkSVG(s.spark,c)+'</div>'+
-    '<div class="ga-chips">'+chips+'</div></button>';
+    '<div class="ga-summary">'+plainSummary(s)+'</div>'+
+    '<div class="ga-chips">'+chips+'</div>'+
+    '<div class="ga-tap">› detay + güncel haber için dokun</div></button>';
 }
 function renderContent(){
   const el=$("content");
