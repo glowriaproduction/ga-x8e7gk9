@@ -147,7 +147,7 @@ body{padding-bottom:40px}
 </head>
 <body>
 <header class="ga-bar">
-  <div class="ga-brand"><span class="ga-glow">GLOWRIA</span><span class="ga-slash">//</span><span class="ga-alpha">ALPHA</span><span class="ga-ver">v8</span></div>
+  <div class="ga-brand"><span class="ga-glow">GLOWRIA</span><span class="ga-slash">//</span><span class="ga-alpha">ALPHA</span><span class="ga-ver">v9</span></div>
   <div class="ga-bar-right">
     <button class="ga-evren" id="evrenBtn">EVREN · Top 40</button>
     <div class="ga-tfs" id="tfs"></div>
@@ -446,15 +446,28 @@ async function deepDive(s){
   const factorTxt=s.factors.map(f=>"• "+f.t).join("\n");
   const prompt="Sen kıdemli, iddialı bir kripto masası analistisin. Görevin belirsiz konuşmak DEĞİL; net bir duruş almak. Aşağıda canlı teknik veriyle taranıp KALİTELİ işaretlenmiş bir setup var. Web aramayı kullanarak "+s.symbol.replace("USDT","")+" ile ilgili son 1-2 gündeki güncel haber/katalizör/duyarlılığı bul. Hem olumlu hem OLUMSUZ haberleri tara. Kararsız kalma: seviyelere bağlı net senaryolar ver.\n\nVERİ ("+ST.tf+"):\nSembol: "+s.symbol+" | Yön: "+s.side+" | Skor: "+s.score.toFixed(1)+"/10\nFiyat: "+fmt(s.price)+" | 24s: "+(s.chg!=null?s.chg.toFixed(1)+"%":"—")+"\nRSI: "+s.rsi.toFixed(0)+" | ATR%: "+s.atrPct.toFixed(1)+" | Hacim: "+s.volRatio.toFixed(1)+"x\nMACD hist: "+(s.macdHist>0?"+":"")+s.macdHist.toFixed(4)+" | SMA50: "+fmt(s.s50)+"\nGiriş: "+fmt(s.entry)+" | Stop: "+fmt(s.stop)+" | Hedef: "+fmt(s.target)+" | R:R≈"+s.rr.toFixed(1)+"\nKonfluans:\n"+factorTxt+
     "\n\nÇIKTI (her başlık ▸ ile, kısa ve keskin, ~230 kelime, markdown yıldızı KULLANMA):\n▸ NET DURUŞ — Tek satır kanaat: kurulumu 'GÜÇLÜ / ORTA / ZAYIF' diye etiketle ve 'giriş için uygun / geri çekilişi bekle / uzak dur' netliğinde bir duruş al. Emir verme, değerlendirme yap.\n▸ TEZ — neden bu yönde.\n▸ KONFLUANS — teknik dayanak.\n▸ GÜNCEL KATALİZÖR — web'den olumlu haberler; yoksa 'belirgin haber yok'.\n▸ SENARYOLAR — koşullu ve seviyeli yaz: 'BOĞA: fiyat [seviye] üstünde tutunursa → [hedef/sonuç]. AYI: [seviye] altına düşerse → tez geçersiz, [bölge] beklenir.' Gerçek sayılar kullan (giriş/stop/hedef verildi).\n▸ RİSKLER & SÜRPRİZ İHTİMALİ — bilinen olumsuz riskleri say (ör. taze pompa, düşük hacim, olumsuz haber). Ayrıca şunu MUTLAKA belirt: ani bir tweet, borsa/regülasyon olayı ya da sert BTC hareketi bu teknik tabloyu bir anda geçersiz kılabilir ve bu araç böyle sürprizleri öngöremez.\nEn sonda ayrı satır: \"⚠ Yatırım tavsiyesi değildir; son karar sana ait.\"";
-  const url="https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent";
   const base={contents:[{parts:[{text:prompt}]}]};
   const withTools={...base,tools:[{google_search:{}}]};
-  const call=(body)=>fetch(url,{method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":GEMINI_KEY},body:JSON.stringify(body)});
+  const call=(model,body)=>fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",
+    {method:"POST",headers:{"Content-Type":"application/json","x-goog-api-key":GEMINI_KEY},body:JSON.stringify(body)});
   const extract=(d)=>{const p=d?.candidates?.[0]?.content?.parts;return p?p.map(x=>x.text||"").filter(Boolean).join("\n").trim():"";};
+  const isQuota=(r,d)=>r.status===429||/RESOURCE_EXHAUSTED|quota/i.test((d&&d.error&&(d.error.status+" "+d.error.message))||"");
+  const retrySec=(d)=>{const m=/retry in ([\d.]+)s/i.exec((d&&d.error&&d.error.message)||"");return m?Math.ceil(parseFloat(m[1])):60;};
   try{
-    let r=await call(withTools);let data=await r.json();
-    if(!r.ok||data.error){                        // arama desteklenmezse aramasız tekrar dene
-      r=await call(base);data=await r.json();
+    // 1) ana model + web araması
+    let r=await call(GEMINI_MODEL,withTools);let data=await r.json();
+    // 2) kota dolduysa: TEKRAR YAKMA, ayrı kotası olan flash-lite'a geç
+    if(isQuota(r,data)){
+      r=await call("gemini-2.5-flash-lite",withTools);data=await r.json();
+      if(isQuota(r,data)){
+        if(id!==aiReq)return;
+        ST.ai="⏳ Ücretsiz Gemini kotası şu an dolu (çok sık analiz istendi). Bu bir arıza değil; yaklaşık "+retrySec(data)+" saniye sonra kartı tekrar aç, kaldığın yerden devam eder.\n\nİpucu: Kartların üstündeki anlık özet + GİRİŞ/STOP/HEDEF rakamları kota harcamaz; derin analizi sadece ciddiye aldığın kart için aç.";
+        ST.aiLoading=false;renderPanel();return;
+      }
+    }
+    // 3) kota dışı bir hataysa (ör. arama desteklenmiyor): aramasız dene
+    if(!r.ok||data.error){
+      r=await call(GEMINI_MODEL,base);data=await r.json();
       if(!r.ok||data.error){if(id!==aiReq)return;ST.ai="Gemini API: "+((data.error&&data.error.message)||r.status)+"\n\nAnahtar doğru mu? aistudio.google.com'dan yeni bir anahtar alıp EVREN'e yapıştır.";ST.aiLoading=false;renderPanel();return;}
     }
     if(id!==aiReq)return;
