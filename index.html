@@ -95,6 +95,10 @@ body{padding-bottom:40px}
 .ga-spark{margin:8px 0 10px;opacity:.9;height:34px}
 .ga-chips{display:flex;flex-wrap:wrap;gap:5px}
 .ga-summary{margin:2px 0 9px;font-size:12.5px;line-height:1.5;color:#c4ccd6}
+.ga-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 10px}
+.ga-mini>div{background:var(--raise);border:1px solid var(--line);border-radius:7px;padding:6px 3px;text-align:center}
+.ga-mini span{display:block;font-size:8px;color:var(--mut);letter-spacing:.08em;margin-bottom:3px}
+.ga-mini b{font-size:11.5px;font-weight:700;font-family:ui-monospace,Menlo,Consolas,monospace}
 .ga-tap{margin-top:9px;font-size:10.5px;color:var(--mut);letter-spacing:.02em;opacity:.75}
 .ga-chip{font-size:10.5px;color:var(--mut);background:var(--raise);border:1px solid var(--line);
   padding:3px 7px;border-radius:5px} .ga-chip.more{color:var(--glow)}
@@ -315,6 +319,14 @@ function plainSummary(s){
   else if(s.volRatio<1)uyari=" Hacim ortalamanın altında.";
   return kalite+" bir "+yon+" kurulumu. Öne çıkan: "+dayanak+". "+rrTxt+"."+uyari;
 }
+function miniLevels(s){
+  const rc=s.rr>=2?"#2DD4A7":"#F0B429";
+  return '<div class="ga-mini">'+
+    '<div><span>GİRİŞ</span><b>'+fmt(s.entry)+'</b></div>'+
+    '<div><span>STOP</span><b style="color:#F06548">'+fmt(s.stop)+'</b></div>'+
+    '<div><span>HEDEF</span><b style="color:#2DD4A7">'+fmt(s.target)+'</b></div>'+
+    '<div><span>R:R</span><b style="color:'+rc+'">'+s.rr.toFixed(1)+'</b></div></div>';
+}
 function cardHTML(s,rank){
   const c=s.side==="LONG"?"#2DD4A7":"#F06548";
   const chips=s.factors.slice(0,4).map(f=>'<span class="ga-chip">'+f.t+'</span>').join("")+
@@ -328,6 +340,7 @@ function cardHTML(s,rank){
     '<div class="ga-score" style="color:'+c+'">'+s.score.toFixed(1)+'<small>/10</small></div></div>'+
     '<div class="ga-spark">'+sparkSVG(s.spark,c)+'</div>'+
     '<div class="ga-summary">'+plainSummary(s)+'</div>'+
+    miniLevels(s)+
     '<div class="ga-chips">'+chips+'</div>'+
     '<div class="ga-tap">› detay + güncel haber için dokun</div></button>';
 }
