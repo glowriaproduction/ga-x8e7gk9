@@ -147,7 +147,7 @@ body{padding-bottom:40px}
 </head>
 <body>
 <header class="ga-bar">
-  <div class="ga-brand"><span class="ga-glow">GLOWRIA</span><span class="ga-slash">//</span><span class="ga-alpha">ALPHA</span><span class="ga-ver">v10</span></div>
+  <div class="ga-brand"><span class="ga-glow">GLOWRIA</span><span class="ga-slash">//</span><span class="ga-alpha">ALPHA</span><span class="ga-ver">v11</span></div>
   <div class="ga-bar-right">
     <button class="ga-evren" id="evrenBtn">EVREN · Top 40</button>
     <div class="ga-tfs" id="tfs"></div>
@@ -193,7 +193,7 @@ function analyze(symbol,candles){
   if(candles.length<61)return null;
   const live=candles[candles.length-1].c;          // oluşmakta olan mumun canlı fiyatı (gösterim/giriş)
   const done=candles.slice(0,-1);                  // sinyaller SADECE kapanmış mumlardan
-  const closes=done.map(c=>c.c),highs=done.map(c=>c.h),lows=done.map(c=>c.l),vols=done.map(c=>c.v);
+  const closes=done.map(c=>c.c),highs=done.map(c=>c.h),lows=done.map(c=>c.l),vols=done.map(c=>c.v),opens=done.map(c=>c.o);
   const price=live,s20=sma(closes,20),s50=sma(closes,50),s200=sma(closes,200),
     e20=ema(closes,20),r=rsi(closes),m=macd(closes),bb=boll(closes),a=atr(highs,lows,closes),volSma=sma(vols,20);
   if(s20==null||s50==null||r==null||m==null||a==null)return null;
@@ -231,14 +231,24 @@ function analyze(symbol,candles){
   if(atrPct>12){flags.push("Aşırı volatilite");longT-=2;shortT-=2;}
   if(volRatio<0.6){flags.push("Düşük hacim");longT-=1.5;shortT-=1.5;}
   const side=longT>=shortT?"LONG":"SHORT";
-  const swingLow=Math.min(...lows.slice(-12)),swingHigh=Math.max(...highs.slice(-12));
+  // --- iğne-farkında seviyeler ---
+  const N=12, lo=lows.slice(-N), hi=highs.slice(-N), op=opens.slice(-N), cl=closes.slice(-N);
+  const wickLow=Math.min(...lo), wickHigh=Math.max(...hi);      // iğne uçları (fitiller dahil)
+  let bodyHigh=-Infinity, bodyLow=Infinity;                    // gövde uçları (fitilsiz)
+  for(let i=0;i<cl.length;i++){
+    const top=Math.max(op[i],cl[i]), bot=Math.min(op[i],cl[i]);
+    if(top>bodyHigh)bodyHigh=top; if(bot<bodyLow)bodyLow=bot;
+  }
+  const buf=0.25*a;                                            // iğne tamponu
   let entry=price,stop,target;
   if(side==="LONG"){
-    stop=Math.min(Math.max(swingLow,price-2.5*a),price-0.8*a);   // yapıya oturur, 0.8–2.5 ATR arası
-    target=Math.max(swingHigh,price+2.0*a);                       // en az 2 ATR veya sonraki direnç
+    // stop: iğnenin biraz ALTINA (avlanma payı), 0.8–2.5 ATR arası sınırlı
+    stop=Math.min(Math.max(wickLow-buf, price-2.5*a), price-0.8*a);
+    // hedef: iğne ucuna DEĞİL, gövde direncine (ya da en az 2 ATR ölçülü hareket)
+    target=Math.max(bodyHigh, price+2.0*a);
   }else{
-    stop=Math.max(Math.min(swingHigh,price+2.5*a),price+0.8*a);
-    target=Math.min(swingLow,price-2.0*a);
+    stop=Math.max(Math.min(wickHigh+buf, price+2.5*a), price+0.8*a);
+    target=Math.min(bodyLow, price-2.0*a);
   }
   let rr=Math.abs((target-entry)/(entry-stop));
   if(!isFinite(rr)||isNaN(rr))rr=0;
