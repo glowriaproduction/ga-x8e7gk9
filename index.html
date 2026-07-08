@@ -147,7 +147,7 @@ body{padding-bottom:40px}
 </head>
 <body>
 <header class="ga-bar">
-  <div class="ga-brand"><span class="ga-glow">GLOWRIA</span><span class="ga-slash">//</span><span class="ga-alpha">ALPHA</span><span class="ga-ver">v9</span></div>
+  <div class="ga-brand"><span class="ga-glow">GLOWRIA</span><span class="ga-slash">//</span><span class="ga-alpha">ALPHA</span><span class="ga-ver">v10</span></div>
   <div class="ga-bar-right">
     <button class="ga-evren" id="evrenBtn">EVREN · Top 40</button>
     <div class="ga-tfs" id="tfs"></div>
@@ -253,9 +253,12 @@ function analyze(symbol,candles){
 }
 
 /* ============ VERİ ============ */
-async function fetchAllTickers(){
+let SOURCE="binance";                              // aktif veri kaynağı
+const OKX_BAR={"15m":"15m","1h":"1H","4h":"4H","1d":"1D"};
+
+async function binanceTickers(){
   const r=await fetch("https://api.binance.com/api/v3/ticker/24hr");
-  if(!r.ok)throw new Error("ticker "+r.status);
+  if(!r.ok)throw new Error("binance ticker "+r.status);
   const arr=await r.json();const map={},ranked=[];
   for(const t of arr){const sym=t.symbol;if(!sym.endsWith("USDT"))continue;
     const qv=parseFloat(t.quoteVolume);
@@ -264,10 +267,37 @@ async function fetchAllTickers(){
   ranked.sort((a,b)=>b.qv-a.qv);
   return{map,ranked:ranked.map(x=>x.sym),valid:new Set(Object.keys(map))};
 }
-async function fetchKlines(sym,tf){
+async function okxTickers(){
+  const r=await fetch("https://www.okx.com/api/v5/market/tickers?instType=SPOT");
+  if(!r.ok)throw new Error("okx ticker "+r.status);
+  const j=await r.json();if(!j.data)throw new Error("okx ticker boş");
+  const map={},ranked=[];
+  for(const t of j.data){const inst=t.instId;if(!inst.endsWith("-USDT"))continue;
+    const sym=inst.replace("-","");                          // BTC-USDT -> BTCUSDT
+    const lastP=parseFloat(t.last),open=parseFloat(t.open24h),qv=parseFloat(t.volCcy24h);
+    map[sym]={chg:open?((lastP-open)/open*100):0,qv,price:lastP};
+    const base=sym.slice(0,-4);if(isLev(sym)||STABLES.has(base))continue;ranked.push({sym,qv});}
+  ranked.sort((a,b)=>b.qv-a.qv);
+  return{map,ranked:ranked.map(x=>x.sym),valid:new Set(Object.keys(map))};
+}
+async function fetchAllTickers(){
+  try{const d=await binanceTickers();SOURCE="binance";return d;}       // önce Binance
+  catch(e){const d=await okxTickers();SOURCE="okx";return d;}           // kapalıysa OKX yedek
+}
+async function binanceKlines(sym,tf){
   const r=await fetch("https://api.binance.com/api/v3/klines?symbol="+sym+"&interval="+tf+"&limit=210");
   if(!r.ok)throw new Error(sym+" "+r.status);
   return (await r.json()).map(x=>({t:x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]}));
+}
+async function okxKlines(sym,tf){
+  const inst=sym.replace(/USDT$/,"-USDT");
+  const r=await fetch("https://www.okx.com/api/v5/market/candles?instId="+inst+"&bar="+(OKX_BAR[tf]||"4H")+"&limit=300");
+  if(!r.ok)throw new Error(sym+" "+r.status);
+  const j=await r.json();if(!j.data||!j.data.length)throw new Error(sym+" veri yok");
+  return j.data.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).reverse(); // OKX yeni→eski
+}
+async function fetchKlines(sym,tf){
+  return SOURCE==="okx" ? okxKlines(sym,tf) : binanceKlines(sym,tf);
 }
 
 /* ============ FORMAT ============ */
@@ -310,6 +340,7 @@ function renderRegime(){
   el.innerHTML='<div class="ga-regime"><span class="ga-risk '+cls+'">'+g.risk+'</span>'+
     '<span class="ga-regime-txt">BTC pusulası · <b style="color:'+(g.side==="LONG"?"#2DD4A7":"#F06548")+'">'+g.side+'</b> · $'+fmt(g.price)+
     (g.chg!=null?' <em style="font-style:normal;color:'+(g.chg>=0?"#2DD4A7":"#F06548")+'">('+(g.chg>=0?"+":"")+g.chg.toFixed(1)+'%)</em>':"")+'</span>'+
+    (SOURCE==="okx"?'<span style="color:var(--glow)">veri: OKX (yedek)</span> · ':'')+
     '<span class="ga-count">'+ST.results.length+' kaliteli / '+ST.uniCount+' tarandı</span></div>';
 }
 function plainSummary(s){
@@ -432,7 +463,7 @@ async function runScan(){
     ST.rejected=out.filter(o=>!o.passed).sort((a,b)=>b.score-a.score);
     ST.scanned=true;
   }catch(e){
-    ST.error="Binance verisine ulaşılamadı. Sayfayı kendi domaininde (GitHub Pages vb.) açtığından ve internetin olduğundan emin ol. Birkaç sn sonra tekrar dene. ("+(e.message||e)+")";
+    ST.error="Piyasa verisine ulaşılamadı (Binance ve OKX yedek kaynağın ikisi de yanıt vermedi). İnternetini kontrol et, sayfayı kendi adresinde açtığından emin ol, birkaç sn sonra tekrar dene. ("+(e.message||e)+")";
   }finally{if(id===reqId){ST.loading=false;renderAll();}}
 }
 
